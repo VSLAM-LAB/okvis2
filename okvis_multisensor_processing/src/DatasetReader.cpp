@@ -49,9 +49,10 @@
 namespace okvis {
 
 DatasetReader::DatasetReader(
-  const std::string& path, size_t numCameras, const std::set<size_t> &syncCameras,
+  const std::string& path, const std::string& rgb_txt,
+  size_t numCameras, const std::set<size_t> &syncCameras,
   const Duration & deltaT) :
-  numCameras_(numCameras), syncCameras_(syncCameras), deltaT_(deltaT) {
+  numCameras_(numCameras), syncCameras_(syncCameras), deltaT_(deltaT), rgb_txt_(rgb_txt) {
   streaming_ = false;
   setDatasetPath(path);
   counter_ = 0;
@@ -94,14 +95,14 @@ bool DatasetReader::startStreaming() {
 
   // open the IMU file
   std::string line;
-  imuFile_.open(path_ + "/imu0/data.csv");
-  OKVIS_ASSERT_TRUE(Exception, imuFile_.good(), "no imu file found at " << path_+"/imu0/data.csv");
+  imuFile_.open(path_ + "/imu.csv");
+  OKVIS_ASSERT_TRUE(Exception, imuFile_.good(), "no imu file found at " << path_+"/imu.csv");
   int number_of_lines = 0;
   while (std::getline(imuFile_, line))
     ++number_of_lines;
   LOG(INFO)<< "No. IMU measurements: " << number_of_lines-1;
   if (number_of_lines - 1 <= 0) {
-    LOG(ERROR)<< "no imu messages present in " << path_+"/imu0/data.csv";
+    LOG(ERROR)<< "no imu messages present in " << path_+"/imu.csv";
     return -1;
   }
   // set reading position to second line
@@ -131,7 +132,7 @@ bool DatasetReader::startStreaming() {
 
     // now also see if there might be depth images
     std::vector < std::pair<std::string, std::string> > depthImageNames;
-    int num_depth_camera_images = readCameraImageCsv("depth", i, depthImageNames);
+    int num_depth_camera_images = 0; // readCameraImageCsv("depth", i, depthImageNames);
     if(num_depth_camera_images>0) {
       allDepthImageNames_[i] = depthImageNames;
       LOG(INFO)<< "No. cam " << i << " depth images: " << num_depth_camera_images;
@@ -146,38 +147,41 @@ bool DatasetReader::startStreaming() {
 }
 
 int DatasetReader::readCameraImageCsv(std::string folderString, size_t camIdx,
-    std::vector < std::pair<std::string, std::string> >& imageNames) const
+  std::vector < std::pair<std::string, std::string> >& imageNames) const
 {
-  const std::string filename = path_ + "/" + folderString + std::to_string(camIdx) + "/data.csv";
-  std::ifstream camDataFile(filename);
-  std::string line;
-  if(!camDataFile.good()) {
-    return -1;
-  }
 
-  int num_camera_images = 0;
-  std::getline(camDataFile, line);
-  while (std::getline(camDataFile, line)) {
-    ++num_camera_images;
-    std::stringstream stream(line);
-    std::string s0, s1;
-    if (!std::getline(stream, s0, ',')) {
-      break;
-    }
-    if (!std::getline(stream, s1)) {
-      break;
-    }
-    if(s1[0]==' ') {
-      s1 = s1.substr(1,s1.size()); // handle stupid extra whitespace in some datasets...!
-    }
-    if(s1[s1.size()-1]=='\r') {
-      s1 = s1.substr(0,s1.size()-1); // handle stupid Windows file endings...!
-    }
-    imageNames.push_back(
-      std::make_pair(s0, path_ + "/" + folderString + std::to_string(camIdx) + "/data/" + s1));
-  }
-  return num_camera_images;
+  std::ifstream camDataFile(rgb_txt_);
+std::string line;
+if(!camDataFile.good()) {
+  return -1;
 }
+
+int num_camera_images = 0;
+while(!camDataFile.eof())
+{
+    std::string s;
+    std::getline(camDataFile,s);
+    if(!s.empty())
+    {
+        std::stringstream ss;
+        ss << s;
+
+        std::string seconds;
+        std::string sRGB;
+        ss >> seconds;
+        std::string nanoseconds = std::to_string(std::stod(seconds) * 1e9);
+        ss >> sRGB;
+        imageNames.push_back(
+          std::make_pair(nanoseconds, path_ + "/" + sRGB));
+        
+        ++num_camera_images;
+    }
+}
+
+return num_camera_images;
+
+}
+
 
 bool DatasetReader::stopStreaming() {
   // Stop the pipeline

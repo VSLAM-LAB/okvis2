@@ -58,25 +58,31 @@ ViParametersReader::ViParametersReader()
     : readConfigFile_(false) {
 }
 
-// The constructor. This calls readConfigFile().
-ViParametersReader::ViParametersReader(const std::string& filename) {
+// The constructor. This calls readConfigFile(). 
+ViParametersReader::ViParametersReader(const std::string& calibration_yaml, const std::string& settings_yaml) {
   // reads
-  readConfigFile(filename);
+  readConfigFile(calibration_yaml, settings_yaml);
 }
 
 // Read and parse a config file.
-void ViParametersReader::readConfigFile(const std::string& filename) {
+void ViParametersReader::readConfigFile(const std::string& calibration_yaml, const std::string& settings_yaml) {
 
   // reads
-  cv::FileStorage file(filename, cv::FileStorage::READ);
+  cv::FileStorage fCalib(calibration_yaml, cv::FileStorage::READ);
+  cv::FileStorage file(settings_yaml, cv::FileStorage::READ);
 
   OKVIS_ASSERT_TRUE(Exception, file.isOpened(),
-                    "Could not open config file: " << filename)
-  LOG(INFO) << "Opened configuration file: " << filename;
+                    "Could not open config file: " << settings_yaml)
+
+  OKVIS_ASSERT_TRUE(Exception, fCalib.isOpened(),
+                    "Could not open calib file: " << calibration_yaml)   
+
+  LOG(INFO) << "Opened configuration file: " << settings_yaml;
+  LOG(INFO) << "Opened configuration file: " << calibration_yaml;
 
   // camera calibration
   std::vector<CameraCalibration,Eigen::aligned_allocator<CameraCalibration>> calibrations;
-  if(!getCameraCalibration(calibrations, file)) {
+  if(!getCameraCalibration(calibrations, fCalib)) {
     LOG(FATAL) << "Did not find any calibration!";
   }
 
@@ -206,18 +212,29 @@ void ViParametersReader::readConfigFile(const std::string& filename) {
              viParameters_.imu.a_max);
   parseEntry(file["imu_parameters"], "g_max",
              viParameters_.imu.g_max);
-  parseEntry(file["imu_parameters"], "sigma_g_c",
-             viParameters_.imu.sigma_g_c);
+
+  //parseEntry(fCalib["IMU"], "NoiseGyro",
+  //           viParameters_.imu.sigma_g_c);
+  viParameters_.imu.sigma_g_c = fCalib["IMU.NoiseGyro"];
+
   parseEntry(file["imu_parameters"], "sigma_bg",
              viParameters_.imu.sigma_bg);
-  parseEntry(file["imu_parameters"], "sigma_a_c",
-             viParameters_.imu.sigma_a_c);
+
+  //parseEntry(file["imu_parameters"], "sigma_a_c",
+  //           viParameters_.imu.sigma_a_c);
+  viParameters_.imu.sigma_a_c = fCalib["IMU.NoiseAcc"];
+
   parseEntry(file["imu_parameters"], "sigma_ba",
              viParameters_.imu.sigma_ba);
-  parseEntry(file["imu_parameters"], "sigma_gw_c",
-             viParameters_.imu.sigma_gw_c);
-  parseEntry(file["imu_parameters"], "sigma_aw_c",
-             viParameters_.imu.sigma_aw_c);
+
+  //parseEntry(file["imu_parameters"], "sigma_gw_c",
+  //           viParameters_.imu.sigma_gw_c);
+  viParameters_.imu.sigma_gw_c = fCalib["IMU.GyroWalk"];
+       
+  //parseEntry(file["imu_parameters"], "sigma_aw_c",
+  //           viParameters_.imu.sigma_aw_c);
+  viParameters_.imu.sigma_aw_c = fCalib["IMU.AccWalk"];
+
   parseEntry(file["imu_parameters"], "a0",
              viParameters_.imu.a0);
   parseEntry(file["imu_parameters"], "g0",
@@ -353,127 +370,176 @@ void ViParametersReader::parseEntry(const cv::FileNode& file, std::string name,
 
 bool ViParametersReader::getCameraCalibration(
     std::vector<CameraCalibration,Eigen::aligned_allocator<CameraCalibration>> & calibrations,
-    cv::FileStorage& configurationFile) {
+    cv::FileStorage& fCalib) {
 
-  bool success = getCalibrationViaConfig(calibrations, configurationFile["cameras"]);
+  bool success = getCalibrationViaConfig(calibrations, fCalib);
   return success;
 }
 
 // Get the camera calibration via the configuration file.
 bool ViParametersReader::getCalibrationViaConfig(
     std::vector<CameraCalibration,Eigen::aligned_allocator<CameraCalibration>> & calibrations,
-    cv::FileNode cameraNode) const {
+    cv::FileStorage& fCalib) const {
 
   calibrations.clear();
-  bool gotCalibration = false;
+  CameraCalibration calib;
+
+  calib.imageDimension << fCalib["Camera.w"], fCalib["Camera.h"];
+
+  std::string distortionType = (std::string)fCalib["Camera.model"];
+  if (distortionType == "PINHOLE") {
+    calib.distortionType = "radialtangential";
+    calib.focalLength << fCalib["Camera.fx"], fCalib["Camera.fy"];
+    calib.principalPoint << fCalib["Camera.cx"], fCalib["Camera.cy"];
+    calib.distortionCoefficients.resize(4);
+    calib.distortionCoefficients[0] = 0.0;
+    calib.distortionCoefficients[1] = 0.0;
+    calib.distortionCoefficients[2] = 0.0;
+    calib.distortionCoefficients[3] = 0.0;
+  }
+  else if (distortionType == "OPENCV") {
+    calib.distortionType = "radialtangential";
+    calib.focalLength << fCalib["Camera.fx"], fCalib["Camera.fy"];
+    calib.principalPoint << fCalib["Camera.cx"], fCalib["Camera.cy"];
+    calib.distortionCoefficients.resize(4);
+    calib.distortionCoefficients[0] = fCalib["Camera.k1"];
+    calib.distortionCoefficients[1] = fCalib["Camera.k2"];
+    calib.distortionCoefficients[2] = fCalib["Camera.p1"];
+    calib.distortionCoefficients[3] = fCalib["Camera.p2"];
+    //calib.distortionCoefficients[4] = fCalib["Camera.k3"];
+  }
+
+  cv::Mat cvTbc = fCalib["IMU.T_b_c1"].mat();
+  Eigen::Matrix4f T_SC{};
+  T_SC << cvTbc.at<float>(0,0), cvTbc.at<float>(0,1), cvTbc.at<float>(0,2), cvTbc.at<float>(0,3),
+          cvTbc.at<float>(1,0), cvTbc.at<float>(1,1), cvTbc.at<float>(1,2), cvTbc.at<float>(1,3),
+          cvTbc.at<float>(2,0), cvTbc.at<float>(2,1), cvTbc.at<float>(2,2), cvTbc.at<float>(2,3),
+          cvTbc.at<float>(3,0), cvTbc.at<float>(3,1), cvTbc.at<float>(3,2), cvTbc.at<float>(3,3);
+  calib.T_SC = kinematics::Transformation(T_SC.cast<double>());
+
+  calib.cameraType.isColour = false;
+
+  calib.cameraType.depthType.isDepthCamera = false;
+  calib.cameraType.depthType.createDepth = false;
+  calib.cameraType.depthType.createVirtual = false;
+  calib.cameraType.isUsed = true;
+  calib.cameraType.depthType.sigmaPixels = 0.0;
+  
+  calibrations.push_back(calib);
+
+  return true;
+
+  }
+
+  //std::terminate();
   // first check if calibration is available in config file
-  if (cameraNode.isSeq()
-     && cameraNode.size() > 0) {
-    size_t camIdx = 0;
-    for (cv::FileNodeIterator it = cameraNode.begin();
-        it != cameraNode.end(); ++it) {
-      if ((*it).isMap()
-          && (*it)["T_SC"].isSeq()
-          && (*it)["image_dimension"].isSeq()
-          && (*it)["image_dimension"].size() == 2
-          && (*it)["distortion_coefficients"].isSeq()
-          && (*it)["distortion_coefficients"].size() >= 4
-          && (*it)["distortion_type"].isString()
-          && (*it)["focal_length"].isSeq()
-          && (*it)["focal_length"].size() == 2
-          && (*it)["principal_point"].isSeq()
-          && (*it)["principal_point"].size() == 2) {
-        LOG(INFO) << "Found calibration in configuration file for camera " << camIdx;
-        gotCalibration = true;
-      } else {
-        LOG(WARNING) << "Found incomplete calibration in configuration file for camera " << camIdx
-                     << ". Will not use the calibration from the configuration file.";
-        return false;
-      }
-      ++camIdx;
-    }
-  }
-  else
-    LOG(INFO) << "Did not find a calibration in the configuration file.";
+  // if (cameraNode.isSeq()
+  //    && cameraNode.size() > 0) {
+  //   size_t camIdx = 0;
+  //   for (cv::FileNodeIterator it = cameraNode.begin();
+  //       it != cameraNode.end(); ++it) {
+  //     if ((*it).isMap()
+  //         && (*it)["T_SC"].isSeq()
+  //         && (*it)["image_dimension"].isSeq()
+  //         && (*it)["image_dimension"].size() == 2
+  //         && (*it)["distortion_coefficients"].isSeq()
+  //         && (*it)["distortion_coefficients"].size() >= 4
+  //         && (*it)["distortion_type"].isString()
+  //         && (*it)["focal_length"].isSeq()
+  //         && (*it)["focal_length"].size() == 2
+  //         && (*it)["principal_point"].isSeq()
+  //         && (*it)["principal_point"].size() == 2) {
+  //       LOG(INFO) << "Found calibration in configuration file for camera " << camIdx;
+  //       gotCalibration = true;
+  //     } else {
+  //       LOG(WARNING) << "Found incomplete calibration in configuration file for camera " << camIdx
+  //                    << ". Will not use the calibration from the configuration file.";
+  //       return false;
+  //     }
+  //     ++camIdx;
+  //   }
+  // }
+  // else
+  //   LOG(INFO) << "Did not find a calibration in the configuration file.";
+  // gotCalibration = true;   
+  // if (gotCalibration) {
+  //   for (cv::FileNodeIterator it = cameraNode.begin();
+  //       it != cameraNode.end(); ++it) {
 
-  if (gotCalibration) {
-    for (cv::FileNodeIterator it = cameraNode.begin();
-        it != cameraNode.end(); ++it) {
+  //     CameraCalibration calib;
 
-      CameraCalibration calib;
+  //     cv::FileNode T_SC_node = (*it)["T_SC"];
+  //     cv::FileNode imageDimensionNode = (*it)["image_dimension"];
+  //     cv::FileNode distortionCoefficientNode = (*it)["distortion_coefficients"];
+  //     cv::FileNode focalLengthNode = (*it)["focal_length"];
+  //     cv::FileNode principalPointNode = (*it)["principal_point"];
 
-      cv::FileNode T_SC_node = (*it)["T_SC"];
-      cv::FileNode imageDimensionNode = (*it)["image_dimension"];
-      cv::FileNode distortionCoefficientNode = (*it)["distortion_coefficients"];
-      cv::FileNode focalLengthNode = (*it)["focal_length"];
-      cv::FileNode principalPointNode = (*it)["principal_point"];
+  //     // extrinsics
+  //     Eigen::Matrix4d T_SC;
+  //     T_SC << T_SC_node[0], T_SC_node[1], T_SC_node[2], T_SC_node[3],
+  //             T_SC_node[4], T_SC_node[5], T_SC_node[6], T_SC_node[7],
+  //             T_SC_node[8], T_SC_node[9], T_SC_node[10], T_SC_node[11],
+  //             T_SC_node[12], T_SC_node[13], T_SC_node[14], T_SC_node[15];
+  //     calib.T_SC = kinematics::Transformation(T_SC);
 
-      // extrinsics
-      Eigen::Matrix4d T_SC;
-      T_SC << T_SC_node[0], T_SC_node[1], T_SC_node[2], T_SC_node[3],
-              T_SC_node[4], T_SC_node[5], T_SC_node[6], T_SC_node[7],
-              T_SC_node[8], T_SC_node[9], T_SC_node[10], T_SC_node[11],
-              T_SC_node[12], T_SC_node[13], T_SC_node[14], T_SC_node[15];
-      calib.T_SC = kinematics::Transformation(T_SC);
+  //     calib.imageDimension << imageDimensionNode[0], imageDimensionNode[1];
+  //     calib.distortionCoefficients.resize(int(distortionCoefficientNode.size()));
+  //     for(int i=0; i<int(distortionCoefficientNode.size()); ++i) {
+  //       calib.distortionCoefficients[i] = distortionCoefficientNode[i];
+  //     }
+  //     calib.focalLength << focalLengthNode[0], focalLengthNode[1];
+  //     calib.principalPoint << principalPointNode[0], principalPointNode[1];
+  //     calib.distortionType = std::string((*it)["distortion_type"]);
 
-      calib.imageDimension << imageDimensionNode[0], imageDimensionNode[1];
-      calib.distortionCoefficients.resize(int(distortionCoefficientNode.size()));
-      for(int i=0; i<int(distortionCoefficientNode.size()); ++i) {
-        calib.distortionCoefficients[i] = distortionCoefficientNode[i];
-      }
-      calib.focalLength << focalLengthNode[0], focalLengthNode[1];
-      calib.principalPoint << principalPointNode[0], principalPointNode[1];
-      calib.distortionType = std::string((*it)["distortion_type"]);
+  //     // parse additional stuff
+  //     if((*it)["camera_type"].isString()){
+  //       std::string camera_type = std::string((*it)["camera_type"]);
+  //       if(camera_type.compare(0,4,"gray")==0) {
+  //         calib.cameraType.isColour = false;
+  //       } else {
+  //         calib.cameraType.isColour = true;
+  //       }
+  //       if(camera_type.size()>=6){
+  //         if(camera_type.compare(camera_type.size()-6,6,"+depth")==0) {
+  //           calib.cameraType.depthType.isDepthCamera = true;
+  //         } else {
+  //           calib.cameraType.depthType.isDepthCamera = false;
+  //         }
+  //       }
+  //     }
+  //     if((*it)["slam_use"].isString()){
+  //       std::string slam_use = std::string((*it)["slam_use"]);
+  //       if(slam_use.compare(0,5,"okvis")==0) {
+  //         calib.cameraType.isUsed = true;
+  //       } else {
+  //         calib.cameraType.isUsed = false;
+  //       }
+  //       if(slam_use.size()>=6){
+  //         if(slam_use.compare(slam_use.size()-6,6,"-depth")==0) {
+  //           calib.cameraType.depthType.createDepth = true;
+  //         } else {
+  //           calib.cameraType.depthType.createDepth = false;
+  //         }
+  //       }
+  //       if(slam_use.size()>=8){
+  //         if(slam_use.compare(slam_use.size()-8,8,"-virtual")==0) {
+  //           calib.cameraType.depthType.createVirtual = true;
+  //         } else {
+  //           calib.cameraType.depthType.createVirtual = false;
+  //         }
+  //       }
+  //     }
+  //     if((*it)["sigma_pixels"].isReal()){
+  //       calib.cameraType.depthType.sigmaPixels = ((*it)["sigma_pixels"]);
+  //     }
+  //     if((*it)["sigma_depth"].isReal()){
+  //       calib.cameraType.depthType.sigmaPixels = ((*it)["sigma_depth"]);
+  //     }
 
-      // parse additional stuff
-      if((*it)["camera_type"].isString()){
-        std::string camera_type = std::string((*it)["camera_type"]);
-        if(camera_type.compare(0,4,"gray")==0) {
-          calib.cameraType.isColour = false;
-        } else {
-          calib.cameraType.isColour = true;
-        }
-        if(camera_type.size()>=6){
-          if(camera_type.compare(camera_type.size()-6,6,"+depth")==0) {
-            calib.cameraType.depthType.isDepthCamera = true;
-          } else {
-            calib.cameraType.depthType.isDepthCamera = false;
-          }
-        }
-      }
-      if((*it)["slam_use"].isString()){
-        std::string slam_use = std::string((*it)["slam_use"]);
-        if(slam_use.compare(0,5,"okvis")==0) {
-          calib.cameraType.isUsed = true;
-        } else {
-          calib.cameraType.isUsed = false;
-        }
-        if(slam_use.size()>=6){
-          if(slam_use.compare(slam_use.size()-6,6,"-depth")==0) {
-            calib.cameraType.depthType.createDepth = true;
-          } else {
-            calib.cameraType.depthType.createDepth = false;
-          }
-        }
-        if(slam_use.size()>=8){
-          if(slam_use.compare(slam_use.size()-8,8,"-virtual")==0) {
-            calib.cameraType.depthType.createVirtual = true;
-          } else {
-            calib.cameraType.depthType.createVirtual = false;
-          }
-        }
-      }
-      if((*it)["sigma_pixels"].isReal()){
-        calib.cameraType.depthType.sigmaPixels = ((*it)["sigma_pixels"]);
-      }
-      if((*it)["sigma_depth"].isReal()){
-        calib.cameraType.depthType.sigmaPixels = ((*it)["sigma_depth"]);
-      }
-
-      calibrations.push_back(calib);
-    }
-  }
-  return gotCalibration;
-}
+  //     calibrations.push_back(calib);
+  //   }
+  // }
+  //return gotCalibration;
+//}
 
 }  // namespace okvis

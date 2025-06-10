@@ -69,7 +69,7 @@ class ViParametersReader{
    * @brief The constructor. This calls readConfigFile().
    * @param filename Configuration filename.
    */
-  ViParametersReader(const std::string& filename);
+  ViParametersReader(const std::string& calibration_yaml, const std::string& settings_yaml);
 
   /// @brief Trivial destructor.
   ~ViParametersReader() = default;
@@ -79,7 +79,7 @@ class ViParametersReader{
    *        To get the result call getParameters().
    * @param filename Configuration filename.
    */
-  void readConfigFile(const std::string& filename);
+  void readConfigFile(const std::string& calibration_yaml, const std::string& settings_yaml);
 
   /**
    * @brief Get parameters.
@@ -149,7 +149,7 @@ class ViParametersReader{
    */
   bool getCalibrationViaConfig(
       std::vector<CameraCalibration,Eigen::aligned_allocator<CameraCalibration>> & calibrations,
-      cv::FileNode cameraNode) const;
+      cv::FileStorage& fCalib) const;
 
 };
 

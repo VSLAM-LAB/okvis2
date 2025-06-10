@@ -97,19 +97,33 @@ if(BUILD_APPS)
   endif()
   
   # OKVIS app
-  add_executable(okvis_app_synchronous okvis_apps/src/okvis_app_synchronous.cpp)
-  target_link_libraries(okvis_app_synchronous
+  # add_executable(okvis_app_synchronous okvis_apps/src/okvis_app_synchronous.cpp)
+  # target_link_libraries(okvis_app_synchronous
+  #   ${OpenCV_LIBS}
+  #   Boost::filesystem
+  #   okvis::MultisensorProcessing
+  # )
+  # target_compile_options(okvis_app_synchronous
+  #   PUBLIC
+  #     ${OKVIS_PUBLIC_CXX_FLAGS}
+  #   PRIVATE
+  #     ${OKVIS_PRIVATE_CXX_FLAGS}
+  # )
+  # install(TARGETS okvis_app_synchronous EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  add_executable(vslamlab_okvis2_mono_vi okvis_apps/src/vslamlab_okvis2_mono_vi.cpp)
+  target_link_libraries(vslamlab_okvis2_mono_vi
     ${OpenCV_LIBS}
     Boost::filesystem
     okvis::MultisensorProcessing
   )
-  target_compile_options(okvis_app_synchronous
+  target_compile_options(vslamlab_okvis2_mono_vi
     PUBLIC
       ${OKVIS_PUBLIC_CXX_FLAGS}
     PRIVATE
       ${OKVIS_PRIVATE_CXX_FLAGS}
   )
-  install(TARGETS okvis_app_synchronous EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(TARGETS vslamlab_okvis2_mono_vi EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
   # DBoW2 test app
   add_executable(dbow2_test okvis_apps/src/dbow2_test.cpp)
@@ -129,35 +143,35 @@ if(BUILD_APPS)
       ${OKVIS_PRIVATE_CXX_FLAGS}
   )
   
-  if(HAVE_LIBREALSENSE)
-    # OKIVS RealSense app
-    add_executable(okvis_app_realsense okvis_apps/src/okvis_app_realsense.cpp)
-    target_link_libraries(okvis_app_realsense
-      ${OpenCV_LIBS}
-      okvis::MultisensorProcessing
-    )
-    target_compile_options(okvis_app_realsense
-      PUBLIC
-        ${OKVIS_PUBLIC_CXX_FLAGS}
-      PRIVATE
-        ${OKVIS_PRIVATE_CXX_FLAGS}
-    )
-    install(TARGETS okvis_app_realsense EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  # if(HAVE_LIBREALSENSE)
+  #   # OKIVS RealSense app
+  #   add_executable(okvis_app_realsense okvis_apps/src/okvis_app_realsense.cpp)
+  #   target_link_libraries(okvis_app_realsense
+  #     ${OpenCV_LIBS}
+  #     okvis::MultisensorProcessing
+  #   )
+  #   target_compile_options(okvis_app_realsense
+  #     PUBLIC
+  #       ${OKVIS_PUBLIC_CXX_FLAGS}
+  #     PRIVATE
+  #       ${OKVIS_PRIVATE_CXX_FLAGS}
+  #   )
+  #   install(TARGETS okvis_app_realsense EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   
-    # OKIVS RealSense recorder app
-    add_executable(okvis_app_realsense_recorder okvis_apps/src/okvis_app_realsense_recorder.cpp)
-    target_link_libraries(okvis_app_realsense_recorder
-      ${OpenCV_LIBS}
-      okvis::MultisensorProcessing
-    )
-    target_compile_options(okvis_app_realsense_recorder
-      PUBLIC
-        ${OKVIS_PUBLIC_CXX_FLAGS}
-      PRIVATE
-        ${OKVIS_PRIVATE_CXX_FLAGS}
-    )
-    install(TARGETS okvis_app_realsense_recorder EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  endif()
+  #   # OKIVS RealSense recorder app
+  #   add_executable(okvis_app_realsense_recorder okvis_apps/src/okvis_app_realsense_recorder.cpp)
+  #   target_link_libraries(okvis_app_realsense_recorder
+  #     ${OpenCV_LIBS}
+  #     okvis::MultisensorProcessing
+  #   )
+  #   target_compile_options(okvis_app_realsense_recorder
+  #     PUBLIC
+  #       ${OKVIS_PUBLIC_CXX_FLAGS}
+  #     PRIVATE
+  #       ${OKVIS_PRIVATE_CXX_FLAGS}
+  #   )
+  #   install(TARGETS okvis_app_realsense_recorder EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  # endif()
   
   if(USE_NN)
     find_package(Torch REQUIRED)
