@@ -36,6 +36,9 @@ endif()
 set(BLA_VENDOR Generic)
 find_package(LAPACK REQUIRED)
 
+add_definitions(-DGLOG_USE_GLOG_EXPORT)
+find_package(glog REQUIRED)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Make sure we use Release and warn otherwise
