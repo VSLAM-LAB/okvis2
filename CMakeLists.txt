@@ -25,6 +25,11 @@ option (DO_TIMING
 option (BUILD_SHARED_LIBS
         "Whether to build okvis as a shared library" OFF)
 
+# Output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+
 set(OKVIS_CXX_STANDARD 17)
 set(OKVIS_PUBLIC_CXX_FLAGS)
 if(APPLE)
@@ -123,7 +128,10 @@ if(BUILD_APPS)
     PRIVATE
       ${OKVIS_PRIVATE_CXX_FLAGS}
   )
-  install(TARGETS vslamlab_okvis2_mono_vi EXPORT okvisTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(TARGETS vslamlab_okvis2_mono_vi EXPORT okvisTargets 
+          RUNTIME DESTINATION bin
+          LIBRARY DESTINATION lib
+          ARCHIVE DESTINATION lib)
 
   # DBoW2 test app
   add_executable(dbow2_test okvis_apps/src/dbow2_test.cpp)
