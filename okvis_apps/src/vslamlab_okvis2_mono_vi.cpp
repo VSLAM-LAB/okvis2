@@ -98,6 +98,7 @@ int main(int argc, char **argv)
   std::string exp_id{"0"};
   std::string settings_yaml{"orbslam2_settings.yaml"};
   bool verbose{true};
+  std::string vocabulary{"resources/small_voc.yml.gz"};
 
   for (int i = 0; i < argc; ++i) {
     std::string arg = argv[i];
@@ -143,6 +144,12 @@ int main(int argc, char **argv)
         std::cout << "[vslamlab_okvis2_mono_vi.cpp] Activate Visualization = " << verbose << std::endl;
         continue;
     }
+        if (arg.find("vocabulary:") != std::string::npos) {
+            removeSubstring(arg, "vocabulary:");
+            vocabulary = arg;
+            std::cout << "[vslamlab_okvis2_mono_vi.cpp] Path to vocabulary = " << vocabulary << std::endl;
+            continue;
+        }
   }
 
   okvis::Duration deltaT(0.0);
@@ -172,11 +179,13 @@ int main(int argc, char **argv)
   }
 
   // also check DBoW2 vocabulary
-  boost::filesystem::path executable(argv[0]);
-  std::string dBowVocDir = executable.remove_filename().string();
-  std::ifstream infile(dBowVocDir+"/small_voc.yml.gz");
+  boost::filesystem::path dBowVocPath(vocabulary);
+  // std::filesystem::path dBowVocPath(vocabulary);
+  std::cout << "DBoW2 vocabulary path: " << dBowVocPath << std::endl;
+  std::string dBowVocDir = dBowVocPath.remove_filename().string(); // executable.remove_filename().string();
+  std::ifstream infile(vocabulary);
   if(!infile.good()) {
-     LOG(ERROR)<<"DBoW2 vocaublary " << dBowVocDir << "/small_voc.yml.gz not found.";
+     LOG(ERROR)<<"DBoW2 vocaublary " << vocabulary;
      return EXIT_FAILURE;
   }
 
