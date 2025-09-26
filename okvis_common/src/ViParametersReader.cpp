@@ -384,13 +384,13 @@ bool ViParametersReader::getCalibrationViaConfig(
   calibrations.clear();
   CameraCalibration calib;
 
-  calib.imageDimension << fCalib["Camera.w"], fCalib["Camera.h"];
+  calib.imageDimension << fCalib["Camera0.w"], fCalib["Camera0.h"];
 
-  std::string distortionType = (std::string)fCalib["Camera.model"];
-  if (distortionType == "PINHOLE") {
+  std::string distortionType = (std::string)fCalib["Camera0.model"];
+  if (distortionType == "Pinhole") {
     calib.distortionType = "radialtangential";
-    calib.focalLength << fCalib["Camera.fx"], fCalib["Camera.fy"];
-    calib.principalPoint << fCalib["Camera.cx"], fCalib["Camera.cy"];
+    calib.focalLength << fCalib["Camera0.fx"], fCalib["Camera0.fy"];
+    calib.principalPoint << fCalib["Camera0.cx"], fCalib["Camera0.cy"];
     calib.distortionCoefficients.resize(4);
     calib.distortionCoefficients[0] = 0.0;
     calib.distortionCoefficients[1] = 0.0;
@@ -399,13 +399,13 @@ bool ViParametersReader::getCalibrationViaConfig(
   }
   else if (distortionType == "OPENCV") {
     calib.distortionType = "radialtangential";
-    calib.focalLength << fCalib["Camera.fx"], fCalib["Camera.fy"];
-    calib.principalPoint << fCalib["Camera.cx"], fCalib["Camera.cy"];
+    calib.focalLength << fCalib["Camera0.fx"], fCalib["Camera0.fy"];
+    calib.principalPoint << fCalib["Camera0.cx"], fCalib["Camera0.cy"];
     calib.distortionCoefficients.resize(4);
-    calib.distortionCoefficients[0] = fCalib["Camera.k1"];
-    calib.distortionCoefficients[1] = fCalib["Camera.k2"];
-    calib.distortionCoefficients[2] = fCalib["Camera.p1"];
-    calib.distortionCoefficients[3] = fCalib["Camera.p2"];
+    calib.distortionCoefficients[0] = fCalib["Camera0.k1"];
+    calib.distortionCoefficients[1] = fCalib["Camera0.k2"];
+    calib.distortionCoefficients[2] = fCalib["Camera0.p1"];
+    calib.distortionCoefficients[3] = fCalib["Camera0.p2"];
     //calib.distortionCoefficients[4] = fCalib["Camera.k3"];
   }
 

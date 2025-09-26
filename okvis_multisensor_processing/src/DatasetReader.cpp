@@ -49,10 +49,10 @@
 namespace okvis {
 
 DatasetReader::DatasetReader(
-  const std::string& path, const std::string& rgb_txt,
+  const std::string& path, const std::string& rgb_csv,
   size_t numCameras, const std::set<size_t> &syncCameras,
   const Duration & deltaT) :
-  numCameras_(numCameras), syncCameras_(syncCameras), deltaT_(deltaT), rgb_txt_(rgb_txt) {
+  numCameras_(numCameras), syncCameras_(syncCameras), deltaT_(deltaT), rgb_csv_(rgb_csv) {
   streaming_ = false;
   setDatasetPath(path);
   counter_ = 0;
@@ -149,20 +149,25 @@ bool DatasetReader::startStreaming() {
 int DatasetReader::readCameraImageCsv(std::string folderString, size_t camIdx,
   std::vector < std::pair<std::string, std::string> >& imageNames) const
 {
-
-  std::ifstream camDataFile(rgb_txt_);
+std::ifstream camDataFile(rgb_csv_);
 std::string line;
 if(!camDataFile.good()) {
   return -1;
 }
 
 int num_camera_images = 0;
+
+// Drop the header 
+std::string s;
+std::getline(camDataFile, s);
+
 while(!camDataFile.eof())
 {
     std::string s;
     std::getline(camDataFile,s);
     if(!s.empty())
     {
+        std::replace(s.begin(), s.end(), ',', ' ');
         std::stringstream ss;
         ss << s;
 
@@ -430,7 +435,7 @@ void  DatasetReader::processing() {
       std::stringstream stream(line);
       std::string s;
       std::getline(stream, s, ',');
-      uint64_t nanoseconds = std::stol(s.c_str());
+      double seconds = std::stod(s.c_str());
 
       Eigen::Vector3d gyr;
       for (int j = 0; j < 3; ++j) {
@@ -444,7 +449,7 @@ void  DatasetReader::processing() {
         acc[j] = std::stof(s);
       }
 
-      t_imu.fromNSec(nanoseconds);
+      t_imu.fromSec(seconds);
 
       // add the IMU measurement for (blocking) processing
       if (t_imu - start + okvis::Duration(1.0) > deltaT_) {

@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   // OKVIS2  inputs
   std::string sequence_path;
   std::string calibration_yaml;
-  std::string rgb_txt;
+  std::string rgb_csv;
   std::string exp_folder;
   std::string exp_id{"0"};
   std::string settings_yaml{"orbslam2_settings.yaml"};
@@ -114,10 +114,10 @@ int main(int argc, char **argv)
         std::cout << "[vslamlab_okvis2_mono_vi.cpp] Path to calibration.yaml = " << calibration_yaml << std::endl;
         continue;
     }
-    if (arg.find("rgb_txt:") != std::string::npos) {
-        removeSubstring(arg, "rgb_txt:");
-        rgb_txt =  arg;
-        std::cout << "[vslamlab_okvis2_mono_vi.cpp] Path to rgb_txt = " << rgb_txt << std::endl;
+    if (arg.find("rgb_csv:") != std::string::npos) {
+        removeSubstring(arg, "rgb_csv:");
+        rgb_csv =  arg;
+        std::cout << "[vslamlab_okvis2_mono_vi.cpp] Path to rgb_csv = " << rgb_csv << std::endl;
         continue;
     }
     if (arg.find("settings_yaml:") != std::string::npos) {
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
                           sequence_path, deltaT, int(parameters.nCameraSystem.numCameras())));
   } else {
     datasetReader.reset(new okvis::DatasetReader(
-                          sequence_path, rgb_txt, int(parameters.nCameraSystem.numCameras()),
+                          sequence_path, rgb_csv, int(parameters.nCameraSystem.numCameras()),
                           parameters.camera.sync_cameras, deltaT));
   }
 

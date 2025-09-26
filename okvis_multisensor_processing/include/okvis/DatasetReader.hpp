@@ -70,7 +70,7 @@ public:
   /// @param numCameras The total number of cameras.
   /// @param syncCameras Camera group to force synchronisation.
   /// @param deltaT Duration [s] to skip in the beginning.
-  DatasetReader(const std::string& path, const std::string& rgb_txt,
+  DatasetReader(const std::string& path, const std::string& rgb_csv,
                 size_t numCameras, const std::set<size_t> & syncCameras,
                 const Duration & deltaT = Duration(0.0));
 
@@ -113,7 +113,7 @@ private:
   std::thread processingThread_; ///< Thread running processing loop.
 
   std::string path_; ///< Dataset path.
-  std::string rgb_txt_;
+  std::string rgb_csv_;
 
   std::atomic_bool streaming_; ///< Are we streaming?
   std::atomic_int counter_; ///< Number of images read yet.
