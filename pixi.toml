@@ -18,7 +18,7 @@ preview = ["pixi-build"]
 # no RealSense, no ROS2. The vocabulary and settings come from VSLAM-LAB (huggingface.co/vslamlab/okvis2-vslamlab).
 [package]
 name = "okvis2"
-version = "1.0"
+version = "1.1"
 description = "OKVIS2: Open Keyframe-based Visual-Inertial SLAM"
 authors = ["Stefan Leutenegger"]
 license = "BSD-3-Clause"

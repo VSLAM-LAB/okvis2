@@ -234,20 +234,24 @@ int main(int argc, char **argv)
   int progress = 0;
   while (true) {
     estimator.processFrame();
+    // display() and drawTopView() also consume the published state updates: always call them, otherwise the
+    // publication queue overruns and the final publish blocks. Only the windows depend on verbose.
     std::map<std::string, cv::Mat> images;
     estimator.display(images);
-    for(const auto & image : images) {
-      cv::imshow(image.first, image.second);
-    }
     cv::Mat topView;
     writer.drawTopView(topView);
-    if(!topView.empty()) {
-      cv::imshow("OKVIS 2 Top View", topView);
-    }
-    if(!images.empty() || !topView.empty()) {
-      char b = cv::waitKey(2);
-      if (b == 's') {
-        cv::imwrite("saved.png", topView);
+    if (verbose) {
+      for(const auto & image : images) {
+        cv::imshow(image.first, image.second);
+      }
+      if(!topView.empty()) {
+        cv::imshow("OKVIS 2 Top View", topView);
+      }
+      if(!images.empty() || !topView.empty()) {
+        char b = cv::waitKey(2);
+        if (b == 's') {
+          cv::imwrite("saved.png", topView);
+        }
       }
     }
 
@@ -260,11 +264,13 @@ int main(int argc, char **argv)
         cv::Mat topView;
         estimator.doFinalBa();
         writer.drawTopView(topView);
-        if (!topView.empty()) {
-          cv::imshow("OKVIS 2 Top View Final", topView);
-          cv::imwrite("okvis2_final_ba.png", topView);
+        if (verbose) {
+          if (!topView.empty()) {
+            cv::imshow("OKVIS 2 Top View Final", topView);
+            cv::imwrite("okvis2_final_ba.png", topView);
+          }
+          cv::waitKey(1000);
         }
-        cv::waitKey(1000);
       }
       estimator.writeFinalTrajectoryCsv();
       if(parameters.estimator.do_final_ba) {
