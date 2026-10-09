@@ -12,18 +12,29 @@ option (BUILD_APPS
         "Builds a demo app (which require boost and OpenCV highgui)" ON)
 option (BUILD_TESTS
         "Builds all gtests" OFF)
+# VSLAM-LAB defaults: no ROS2 wrapper, no live RealSense input, no keypoint classification network (its settings
+# have use_cnn: false), so the build needs neither librealsense nor libtorch/CUDA
 option (BUILD_ROS2
-        "Builds ros2 wrapper" ON)
+        "Builds ros2 wrapper" OFF)
 option (HAVE_LIBREALSENSE
-        "Use realsense as part of okvis" ON)
+        "Use realsense as part of okvis" OFF)
 option (USE_NN
-        "Use keypoint classification as part of okvis, requires torch" ON)
+        "Use keypoint classification as part of okvis, requires torch" OFF)
 option (USE_GPU
         "Use keypoint classification with GPU inference, requires torch with Cuda" OFF)
 option (DO_TIMING
         "Enable timing" ON)
 option (BUILD_SHARED_LIBS
         "Whether to build okvis as a shared library" OFF)
+option (INSTALL_APPS_ONLY
+        "Install only the VSLAM-LAB executable, not the okvis/ceres/brisk/DBoW2/opengv libraries, headers and CMake configs" OFF)
+
+# INSTALL_APPS_ONLY (conda package): install() becomes a no-op for okvis and the vendored externals; the executable
+# is installed with the original command (_install) below
+if(INSTALL_APPS_ONLY)
+  function(install)
+  endfunction()
+endif()
 
 # Output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
@@ -128,10 +139,14 @@ if(BUILD_APPS)
     PRIVATE
       ${OKVIS_PRIVATE_CXX_FLAGS}
   )
-  install(TARGETS vslamlab_okvis2_mono_vi EXPORT okvisTargets 
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION lib
-          ARCHIVE DESTINATION lib)
+  if(INSTALL_APPS_ONLY)
+    _install(TARGETS vslamlab_okvis2_mono_vi RUNTIME DESTINATION bin)
+  else()
+    install(TARGETS vslamlab_okvis2_mono_vi EXPORT okvisTargets
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib)
+  endif()
 
   # DBoW2 test app
   add_executable(dbow2_test okvis_apps/src/dbow2_test.cpp)

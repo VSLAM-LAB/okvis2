@@ -33,6 +33,7 @@ if(NOT USE_SYSTEM_CERES)
   option(BUILD_TESTING OFF)
   option(BUILD_EXAMPLES OFF)
   option(BUILD_BENCHMARKS OFF)
+  set(USE_CUDA OFF CACHE BOOL "Ceres: no CUDA linear solvers (okvis does not use them)")
   add_subdirectory(ceres-solver)
 endif()
 

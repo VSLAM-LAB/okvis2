@@ -100,6 +100,12 @@ int main(int argc, char **argv)
   bool verbose{true};
   std::string vocabulary{"resources/small_voc.yml.gz"};
 
+  if (argc > 1 && std::string(argv[1]) == "--help") {
+    std::cout << "Usage: vslamlab_okvis2_mono_vi sequence_path:<dir> calibration_yaml:<file> rgb_csv:<file> exp_folder:<dir>"
+              << " [exp_id:<n>] [settings_yaml:<file>] [verbose:<0|1>] [vocabulary:<small_voc.yml.gz>]" << std::endl;
+    return 0;
+  }
+
   for (int i = 0; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg.find("sequence_path:") != std::string::npos) {

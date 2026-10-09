@@ -1,0 +1,63 @@
+# Conda package definition for okvis2 ([package], built by pixi-build from this repo for releases), plus a
+# development environment ([workspace]) that compiles this repo in place with `pixi run install`.
+# Releases are published by CI on vX.Y tags (linux-64).
+[workspace]
+authors = ["vslamlab <vslamlab@gmail.com>"]
+channels = ["https://prefix.dev/conda-forge"]
+name = "okvis2"
+platforms = ["linux-64"]
+version = "0.1.0"
+preview = ["pixi-build"]
+
+########################################################################################################################
+# Package. Release: from a clean checkout of a tagged commit (CI does this, see .github/workflows/conda-package.yml)
+#   pixi publish --clean --target-dir output
+#   pixi upload prefix --channel vslamlab/vslamlab output/*.conda
+# Builds vslamlab_okvis2_mono_vi with okvis and its vendored externals (ceres 2.2, brisk, DBoW2, opengv) linked in
+# statically; only the executable is installed (INSTALL_APPS_ONLY). No keypoint classification network (no libtorch),
+# no RealSense, no ROS2. The vocabulary and settings come from VSLAM-LAB (huggingface.co/vslamlab/okvis2-vslamlab).
+[package]
+name = "okvis2"
+version = "1.0"
+description = "OKVIS2: Open Keyframe-based Visual-Inertial SLAM"
+authors = ["Stefan Leutenegger"]
+license = "BSD-3-Clause"
+license-file = "LICENSE"
+homepage = "https://github.com/ethz-mrl/okvis2"
+repository = "https://github.com/VSLAM-LAB/okvis2"
+
+[package.build]
+backend = { name = "pixi-build-cmake", version = "0.*" }
+
+[package.build.config]
+extra-args = ["-DBUILD_SHARED_LIBS=OFF", "-DINSTALL_APPS_ONLY=ON"]
+# Ceres/okvis translation units are memory-heavy; the CI runner has 16 GB
+env = { CMAKE_BUILD_PARALLEL_LEVEL = "2" }
+
+[package.host-dependencies]
+eigen = "3.4.*"         # the version the previous okvis2 package was built and validated with
+glog = "*"
+libblas = "*"
+liblapack = "*"
+suitesparse = "*"       # ceres: CHOLMOD/SPQR
+libboost-devel = "*"    # filesystem
+libopencv = "<5"
+yaml-cpp = "*"
+
+########################################################################################################################
+# Workspace: development environment. `pixi run install` compiles this repo in place (bin/) against this environment;
+# run it again after editing the sources. The environment gets the [package] build/host/run dependencies through
+# [dev] (okvis2 itself is not built).
+[tasks]
+# jobs: parallel compile jobs (ceres/okvis translation units are memory-heavy). INSTALL_APPS_ONLY: nothing is installed
+# from here, and the install(EXPORT) rules would reject include paths inside this repo (.pixi/envs)
+install = { cmd = "cmake -G Ninja -B build -S . -DCMAKE_BUILD_TYPE=Release -DINSTALL_APPS_ONLY=ON && cmake --build build --parallel {{ jobs }}", args = [{ arg = "jobs", default = "3" }] }
+execute-mono-vi = "./bin/vslamlab_okvis2_mono_vi"
+test = "./bin/vslamlab_okvis2_mono_vi --help && echo OK"
+
+[dev]
+okvis2 = { path = "." }  # installs the [package] build/host/run dependencies, not okvis2 itself
+
+[dependencies]
+cmake = "*"
+ninja = "*"

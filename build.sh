@@ -33,11 +33,11 @@ build_library() {
   if [ "$verbose" = true ]; then
     echo "[OKVIS2][build.sh] Compile ${library_name} ... "
   	cmake -G Ninja -B $build_folder -S $source_folder -DCMAKE_PREFIX_PATH=$source_folder -DCMAKE_INSTALL_PREFIX=$source_folder
-  	cmake --build $build_folder --config Release
+  	cmake --build $build_folder --config Release --parallel 3
   else
     echo "[OKVIS2][build.sh] Compile ${library_name} (output disabled) ... "
   	cmake -G Ninja -B $build_folder -S $source_folder -DCMAKE_PREFIX_PATH=$source_folder -DCMAKE_INSTALL_PREFIX=$source_folder > /dev/null 2>&1
-  	cmake --build $build_folder --config Release > /dev/null 2>&1
+  	cmake --build $build_folder --config Release --parallel 3 > /dev/null 2>&1
   fi
 }
 
@@ -60,7 +60,7 @@ done
 
 # Baseline Dir
 LIBRARY_PATH=$(realpath "$0")
-LIBRARY_DIR=$(dirname "LIBRARY_PATH")
+LIBRARY_DIR=$(dirname "$LIBRARY_PATH")
 
 ## Build OKVIS2
 library_name="OKVIS2"
